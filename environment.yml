@@ -1,0 +1,15 @@
+name: lectio
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - nodejs=20
+  - pip
+  - pip:
+      - paddlepaddle
+      - paddleocr
+      - fastapi
+      - "uvicorn[standard]"
+      - python-multipart
+      - pymupdf
+      - pillow

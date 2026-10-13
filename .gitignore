@@ -1,0 +1,20 @@
+# Node
+node_modules/
+frontend/dist/
+desktop/dist/
+desktop/out/
+npm-debug.log*
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# macOS / éditeurs
+.DS_Store
+.vscode/
+.idea/
+
+# Secrets
+.env

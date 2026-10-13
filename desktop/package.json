@@ -1,0 +1,14 @@
+{
+  "name": "lectio-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lectio – OCR de PDF (application de bureau)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "app": "npm --prefix ../frontend run build && electron ."
+  },
+  "devDependencies": {
+    "electron": "^41.7.1"
+  }
+}
