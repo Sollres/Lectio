@@ -14,6 +14,7 @@ Tout fonctionne **en local** : vos documents ne quittent jamais votre machine.
 - **Visionneuse** : navigation page par page.
 - **OCR total** : reconnaissance de toutes les pages, séparées par `--- Page n ---`.
 - **OCR par zone** : tracez un rectangle à la souris sur le PDF (un simple clic efface la zone), puis lancez l'OCR sur cette seule zone. Une zone est mémorisée par page.
+- **Surlignage sur le PDF** : les éléments de texte détectés sont encadrés en **bleu** ; une fois validés, ils sont surlignés en **vert** et numérotés. Le numéro correspond à celui de la liste des résultats validés.
 - **Résultat modifiable** : corrigez le texte directement dans l'application.
 - **Validation et export** : validez les résultats un par un, retrouvez-les dans la liste, puis téléchargez-les en `.txt`.
 - **Moteur [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR)** : reconnaissance en français par défaut, entièrement hors ligne une fois les modèles téléchargés.
@@ -151,9 +152,10 @@ cd ../backend && python -m uvicorn main:app --port 8000   # http://localhost:800
 3. Au choix :
    - cliquez sur **OCR total** pour lire tout le document ;
    - ou **maintenez le clic et glissez** sur le PDF pour tracer une zone, puis cliquez sur **OCR de la zone sélectionnée**.
-4. Le texte s'affiche en bas à droite, sous les boutons. **Corrigez-le** si besoin.
-5. Cliquez sur **✅ Valider** pour l'ajouter à la liste des résultats validés.
-6. Cliquez sur **Télécharger (.txt)** pour exporter tous les résultats validés.
+4. Le texte s'affiche en bas à droite, sous les boutons, et les éléments détectés sont **encadrés en bleu** sur le PDF. **Corrigez le texte** si besoin.
+5. Cliquez sur **✅ Valider** : le résultat rejoint la liste des résultats validés et ses éléments sont **surlignés en vert** (numérotés) sur le PDF.
+6. Dans la liste, survolez un résultat pour le mettre en évidence sur le PDF, cliquez sur **Voir** pour aller à sa page, ou sur **Retirer** pour le supprimer (le surlignage disparaît).
+7. Cliquez sur **Télécharger (.txt)** pour exporter tous les résultats validés.
 
 💡 Un simple clic sur le PDF efface la zone. Le bouton *OCR de la zone* reste grisé tant qu'aucune zone n'est tracée.
 
@@ -178,8 +180,8 @@ Exemple : `LECTIO_PYTHON=/chemin/vers/python npm run app`
 |---|---|---|
 | `POST` | `/api/documents` | Envoie un PDF ; renvoie son identifiant et la taille des pages |
 | `GET` | `/api/documents/{id}/pages/{n}/image` | Image JPEG de la page `n` (à partir de 1) |
-| `POST` | `/api/documents/{id}/ocr` | OCR de tout le document |
-| `POST` | `/api/documents/{id}/ocr/zone` | OCR d'une zone `{page, x, y, w, h}` (valeurs de 0 à 1) |
+| `POST` | `/api/documents/{id}/ocr` | OCR de tout le document ; renvoie `text` et `lines` (position de chaque ligne détectée) |
+| `POST` | `/api/documents/{id}/ocr/zone` | OCR d'une zone `{page, x, y, w, h}` (valeurs de 0 à 1) ; renvoie `text` et `lines` |
 | `GET` | `/api/health` | Vérifie que le serveur répond |
 
 La documentation interactive est disponible sur `/docs` quand l'API tourne.
@@ -202,8 +204,9 @@ La documentation interactive est disponible sur `/docs` quand l'API tourne.
 ## 🧭 Limites et pistes d'amélioration
 
 - Seuls les **PDF** sont acceptés pour l'instant (les images pourraient être ajoutées).
+- Le surlignage se fait au niveau des **lignes de texte détectées** par PaddleOCR, pas mot à mot. Si vous corrigez le texte, les surlignages ne changent pas.
 - Python n'est pas embarqué : l'environnement conda `lectio` est nécessaire pour lancer l'application.
-- Idées : surlignage des mots détectés sur le PDF, zoom, export PDF « interrogeable », empaquetage en `.app` / `.dmg`.
+- Idées : surlignage mot à mot, lien entre une ligne du texte et sa place sur le PDF, zoom, export PDF « interrogeable », empaquetage en `.app` / `.dmg`.
 
 ---
 

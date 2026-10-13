@@ -9,12 +9,20 @@ export default function App() {
   const [selections, setSelections] = useState({}); // une zone par page
   const [text, setText] = useState("");
   const [source, setSource] = useState("");
-  const [validated, setValidated] = useState([]);
+  const [validated, setValidated] = useState([]);  // { id, source, text, zone|null }
+  const [resultZone, setResultZone] = useState(null); // zone d'où vient le texte affiché
+  const [resultLines, setResultLines] = useState([]);  // lignes détectées du résultat affiché
+  const [hoverId, setHoverId] = useState(null);       // résultat survolé dans la liste
   const [busy, setBusy] = useState(null);        // null | "upload" | "doc" | "zone"
   const [error, setError] = useState(null);
 
   const selection = selections[page] ?? null;
   const pageInfo = doc?.pages[page - 1];
+  // éléments validés (vert) et éléments détectés en attente de validation (bleu), page courante
+  const highlights = validated
+    .map((v, i) => ({ id: v.id, n: i + 1, boxes: v.lines.filter((l) => l.page === page) }))
+    .filter((h) => h.boxes.length > 0);
+  const preview = resultLines.filter((l) => l.page === page);
 
   const guard = async (kind, fn) => {
     setBusy(kind);
@@ -41,24 +49,49 @@ export default function App() {
       setText("");
       setSource("");
       setValidated([]);
+      setResultZone(null);
+      setResultLines([]);
     });
   };
 
-  const applyResult = (r) => {
+  const applyResult = (r, zone) => {
     setText(r.text);
     setSource(r.source);
+    setResultZone(zone);
+    setResultLines(r.lines ?? []);
   };
 
-  const ocrAll = () => guard("doc", async () => applyResult(await ocrDocument(doc.id)));
-  const ocrSelection = () =>
-    guard("zone", async () => applyResult(await ocrZone(doc.id, page, selection)));
+  const ocrAll = () => guard("doc", async () => applyResult(await ocrDocument(doc.id), null));
+  const ocrSelection = () => {
+    const zone = { page, rect: selection };
+    guard("zone", async () =>
+      applyResult(await ocrZone(doc.id, zone.page, zone.rect), zone)
+    );
+  };
 
   const setSelection = (rect) => setSelections((s) => ({ ...s, [page]: rect }));
 
   const validate = () => {
     if (!text.trim()) return;
     const id = `${Date.now()}-${Math.random()}`;
-    setValidated((v) => [...v, { id, source, text }]);
+    // éléments à surligner : lignes détectées, ou à défaut le rectangle tracé
+    const lines = resultLines.length
+      ? resultLines
+      : resultZone
+        ? [{ page: resultZone.page, text, ...resultZone.rect }]
+        : [];
+    setValidated((v) => [...v, { id, source, text, lines }]);
+    if (resultZone) {
+      // le cadre rouge disparaît (sauf si l'utilisateur a tracé autre chose entre-temps)
+      setSelections((s) =>
+        s[resultZone.page] === resultZone.rect ? { ...s, [resultZone.page]: null } : s
+      );
+    }
+    // prêt pour la suite : le texte est dans la liste des résultats validés
+    setText("");
+    setSource("");
+    setResultZone(null);
+    setResultLines([]);
   };
 
   const download = () => {
@@ -134,6 +167,9 @@ export default function App() {
               height={pageInfo.height}
               selection={selection}
               onSelect={setSelection}
+              highlights={highlights}
+              preview={preview}
+              activeId={hoverId}
             />
           </section>
 
@@ -155,6 +191,11 @@ export default function App() {
 
             <h2>Résultat</h2>
             {source && <p className="muted small">{source}</p>}
+            {resultLines.length > 0 && (
+              <p className="muted small">
+                {resultLines.length} élément(s) détecté(s), encadrés en bleu sur le PDF.
+              </p>
+            )}
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -168,16 +209,34 @@ export default function App() {
             {validated.length > 0 && (
               <details className="validated">
                 <summary>Résultats validés ({validated.length})</summary>
-                {validated.map((v) => (
-                  <div key={v.id} className="validated-item">
+                {validated.map((v, i) => (
+                  <div
+                    key={v.id}
+                    className="validated-item"
+                    onMouseEnter={() => setHoverId(v.id)}
+                    onMouseLeave={() => setHoverId(null)}
+                  >
                     <div className="validated-head">
-                      <strong>{v.source}</strong>
-                      <button
-                        className="link"
-                        onClick={() => setValidated((list) => list.filter((x) => x.id !== v.id))}
-                      >
-                        Retirer
-                      </button>
+                      <strong>
+                        {v.lines.length ? `${i + 1}. ` : ""}
+                        {v.source}
+                      </strong>
+                      <span className="actions">
+                        {v.lines.length > 0 && (
+                          <button
+                            className="link neutral"
+                            onClick={() => setPage(v.lines[0].page)}
+                          >
+                            Voir
+                          </button>
+                        )}
+                        <button
+                          className="link"
+                          onClick={() => setValidated((list) => list.filter((x) => x.id !== v.id))}
+                        >
+                          Retirer
+                        </button>
+                      </span>
                     </div>
                     <pre>{v.text}</pre>
                   </div>

@@ -101,3 +101,27 @@ body {
   .workspace { grid-template-columns: 1fr; }
   .panel { position: static; }
 }
+
+/* ---------- Zones validées (surlignage vert) ---------- */
+.highlight {
+  position: absolute; pointer-events: none;
+  border: 2px solid var(--success); background: rgba(47, 158, 68, 0.18);
+  transition: background 0.15s, box-shadow 0.15s;
+}
+.highlight.active { background: rgba(47, 158, 68, 0.38); box-shadow: 0 0 0 3px rgba(47, 158, 68, 0.35); }
+.highlight .badge {
+  position: absolute; top: 0; left: 0;
+  background: var(--success); color: #fff; font-size: 12px; font-weight: 600;
+  line-height: 1; padding: 3px 6px; border-radius: 0 0 4px 0;
+}
+.validated-item { border-radius: 6px; }
+.validated-item:hover { background: #f1f3f5; }
+.validated-head .actions { display: flex; gap: 10px; flex-shrink: 0; }
+.link.neutral { color: var(--primary); }
+
+/* ---------- Éléments détectés / validés (niveau ligne) ---------- */
+.preview {
+  position: absolute; pointer-events: none;
+  border: 1.5px dashed var(--primary); background: rgba(59, 91, 219, 0.10);
+}
+.highlight { border-width: 1.5px; }

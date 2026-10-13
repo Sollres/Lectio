@@ -2,6 +2,13 @@ import { useRef, useState } from "react";
 
 const clamp = (v) => Math.min(Math.max(v, 0), 1);
 
+const boxStyle = (b) => ({
+  left: `${b.x * 100}%`,
+  top: `${b.y * 100}%`,
+  width: `${b.w * 100}%`,
+  height: `${b.h * 100}%`,
+});
+
 const rectOf = (a, b) => ({
   x: Math.min(a.x, b.x),
   y: Math.min(a.y, b.y),
@@ -12,8 +19,19 @@ const rectOf = (a, b) => ({
 /**
  * Affiche une page et permet de tracer une zone à la souris.
  * `selection` / `onSelect` utilisent des coordonnées normalisées (0 à 1).
+ * `highlights` : éléments validés, surlignés en vert ({ id, n, boxes: [{x,y,w,h}] }).
+ * `preview`    : éléments détectés, pas encore validés, encadrés en bleu.
  */
-export default function PdfViewer({ src, width, height, selection, onSelect }) {
+export default function PdfViewer({
+  src,
+  width,
+  height,
+  selection,
+  onSelect,
+  highlights = [],
+  preview = [],
+  activeId = null,
+}) {
   const overlayRef = useRef(null);
   const startRef = useRef(null);
   const [draft, setDraft] = useState(null);
@@ -55,6 +73,20 @@ export default function PdfViewer({ src, width, height, selection, onSelect }) {
   return (
     <div className="page" style={{ aspectRatio: `${width} / ${height}` }}>
       <img src={src} alt="Page du PDF" draggable={false} />
+      {preview.map((b, j) => (
+        <div key={`p${j}`} className="preview" style={boxStyle(b)} />
+      ))}
+      {highlights.map((h) =>
+        h.boxes.map((b, j) => (
+          <div
+            key={`${h.id}-${j}`}
+            className={`highlight ${h.id === activeId ? "active" : ""}`}
+            style={boxStyle(b)}
+          >
+            {j === 0 && <span className="badge">{h.n}</span>}
+          </div>
+        ))
+      )}
       <div
         ref={overlayRef}
         className="overlay"

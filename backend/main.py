@@ -44,21 +44,48 @@ def _load_ocr():
         return PaddleOCR(lang=OCR_LANG, use_angle_cls=True)
 
 
-def run_ocr(img: Image.Image) -> str:
+def _item(text, poly) -> dict:
+    """Texte + rectangle englobant (en pixels) à partir du polygone détecté."""
+    pts = np.asarray(poly, dtype=float).reshape(-1, 2)
+    return {
+        "text": str(text),
+        "x0": float(pts[:, 0].min()), "y0": float(pts[:, 1].min()),
+        "x1": float(pts[:, 0].max()), "y1": float(pts[:, 1].max()),
+    }
+
+
+def run_ocr(img: Image.Image) -> list[dict]:
+    """Lignes de texte détectées : {text, x0, y0, x1, y1}, en pixels de `img`."""
     global _ocr
     arr = np.array(img.convert("RGB"))
+    items: list[dict] = []
     with _ocr_lock:
         if _ocr is None:
             _ocr = _load_ocr()
-        lines: list[str] = []
         if hasattr(_ocr, "predict"):  # 3.x
             for r in _ocr.predict(arr):
-                lines += list(r["rec_texts"])
+                texts = list(r["rec_texts"])
+                try:
+                    polys = r["rec_polys"]
+                except (KeyError, TypeError):
+                    polys = r["dt_polys"]
+                items += [_item(t, p) for t, p in zip(texts, polys)]
         else:  # 2.x
             res = _ocr.ocr(arr)
-            for line in (res[0] or []):
-                lines.append(line[1][0])
-    return "\n".join(lines)
+            for poly, (text, _score) in (res[0] or []):
+                items.append(_item(text, poly))
+    return items
+
+
+def to_lines(items, page: int, width: int, height: int, dx: float = 0.0, dy: float = 0.0):
+    """Convertit les rectangles en pixels vers des coordonnées normalisées (0 à 1) de la page."""
+    clamp = lambda v: min(max(v, 0.0), 1.0)
+    out = []
+    for it in items:
+        x0, x1 = clamp((it["x0"] + dx) / width), clamp((it["x1"] + dx) / width)
+        y0, y1 = clamp((it["y0"] + dy) / height), clamp((it["y1"] + dy) / height)
+        out.append({"page": page, "text": it["text"], "x": x0, "y": y0, "w": x1 - x0, "h": y1 - y0})
+    return out
 
 
 def _warmup():
@@ -145,8 +172,13 @@ def page_image(doc_id: str, page: int):
 @app.post("/api/documents/{doc_id}/ocr")
 def ocr_document(doc_id: str):
     doc = fitz.open(stream=get_pdf(doc_id), filetype="pdf")
-    parts = [f"--- Page {i + 1} ---\n{run_ocr(_render(doc, i))}" for i in range(len(doc))]
-    return {"source": "Document complet", "text": "\n\n".join(parts)}
+    parts, lines = [], []
+    for i in range(len(doc)):
+        img = _render(doc, i)
+        items = run_ocr(img)
+        parts.append(f"--- Page {i + 1} ---\n" + "\n".join(it["text"] for it in items))
+        lines += to_lines(items, i + 1, img.width, img.height)
+    return {"source": "Document complet", "text": "\n\n".join(parts), "lines": lines}
 
 
 @app.post("/api/documents/{doc_id}/ocr/zone")
@@ -158,10 +190,15 @@ def ocr_zone(doc_id: str, z: Zone):
     if right - left < 5 or bottom - top < 5:
         raise HTTPException(400, "Zone trop petite.")
     # petite marge blanche : aide la détection du texte collé au bord de la zone
-    crop = ImageOps.expand(img.crop((left, top, right, bottom)), border=12, fill="white")
+    border = 12
+    crop = ImageOps.expand(img.crop((left, top, right, bottom)), border=border, fill="white")
+    items = run_ocr(crop)
+    # coordonnées du recadrage -> coordonnées de la page entière
+    lines = to_lines(items, z.page, img.width, img.height, dx=left - border, dy=top - border)
     return {
         "source": f"Page {z.page} – zone ({left},{top},{right - left}×{bottom - top})",
-        "text": run_ocr(crop),
+        "text": "\n".join(it["text"] for it in items),
+        "lines": lines,
     }
 
 
