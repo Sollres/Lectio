@@ -38,10 +38,12 @@ function freePort() {
   });
 }
 
+// 0.0.0.0 : nécessaire pour que le téléphone atteigne la page photo (le reste de l'API reste
+// réservé à cet ordinateur, voir lan_guard dans backend/main.py)
 function startBackend(port) {
   py = spawn(
     PYTHON,
-    ["-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", String(port)],
+    ["-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", String(port)],
     { cwd: BACKEND }
   );
   py.stderr.on("data", (d) => {
