@@ -8,7 +8,9 @@ async function request(url, options) {
     } catch {
       /* réponse sans JSON */
     }
-    throw new Error(detail || `Erreur ${res.status}`);
+    const err = new Error(detail || `Erreur ${res.status}`);
+    err.status = res.status;
+    throw err;
   }
   return res.json();
 }
@@ -18,6 +20,10 @@ export function uploadPdf(file) {
   form.append("file", file);
   return request("/api/documents", { method: "POST", body: form });
 }
+
+export const createMobileSession = () => request("/api/mobile/sessions", { method: "POST" });
+
+export const getMobileSession = (token) => request(`/api/mobile/sessions/${token}`);
 
 export const pageImageUrl = (docId, page) => `/api/documents/${docId}/pages/${page}/image`;
 

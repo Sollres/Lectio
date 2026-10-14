@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 
-export default function UploadZone({ onFile, busy }) {
+export default function UploadZone({ onFile, onMobile, busy }) {
   const inputRef = useRef(null);
   const [over, setOver] = useState(false);
 
@@ -21,9 +21,16 @@ export default function UploadZone({ onFile, busy }) {
     >
       <p className="upload-title">{busy ? "Chargement du PDF…" : "Déposez un PDF ici"}</p>
       <p className="muted">ou</p>
-      <button className="btn primary" disabled={busy} onClick={() => inputRef.current.click()}>
-        Charger un PDF
-      </button>
+      <div className="upload-actions">
+        <button className="btn primary" disabled={busy} onClick={() => inputRef.current.click()}>
+          Charger un PDF
+        </button>
+        {onMobile && (
+          <button className="btn" disabled={busy} onClick={onMobile}>
+            📱 Photo / scanner avec le téléphone
+          </button>
+        )}
+      </div>
       <input
         ref={inputRef}
         type="file"

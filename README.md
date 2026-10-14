@@ -15,6 +15,7 @@ Tout fonctionne **en local** : vos documents ne quittent jamais votre machine.
 - **OCR total** : reconnaissance de toutes les pages, séparées par `--- Page n ---`.
 - **OCR par zone** : tracez un rectangle à la souris sur le PDF (un simple clic efface la zone), puis lancez l'OCR sur cette seule zone. Une zone est mémorisée par page.
 - **Surlignage sur le PDF** : les éléments de texte détectés sont encadrés en **bleu** ; une fois validés, ils sont surlignés en **vert** et numérotés. Le numéro correspond à celui de la liste des résultats validés.
+- **Photo depuis le téléphone** : un QR code à scanner ouvre l'appareil photo du téléphone ; la photo prise arrive directement dans Lectio, prête pour l'OCR.
 - **Résultat modifiable** : corrigez le texte directement dans l'application.
 - **Validation et export** : validez les résultats un par un, retrouvez-les dans la liste, puis téléchargez-les en `.txt`.
 - **Moteur [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR)** : reconnaissance en français par défaut, entièrement hors ligne une fois les modèles téléchargés.
@@ -129,7 +130,7 @@ Pour modifier l'interface, ouvrez deux terminaux avec l'environnement `lectio` a
 ```bash
 # Terminal 1 : l'API
 cd backend
-python -m uvicorn main:app --port 8000
+python -m uvicorn main:app --host 0.0.0.0 --port 8000
 
 # Terminal 2 : l'interface
 cd frontend
@@ -140,14 +141,14 @@ npm run dev          # http://localhost:5173
 
 ```bash
 cd frontend && npm run build
-cd ../backend && python -m uvicorn main:app --port 8000   # http://localhost:8000
+cd ../backend && python -m uvicorn main:app --host 0.0.0.0 --port 8000   # http://localhost:8000
 ```
 
 ---
 
 ## 🖱️ Utilisation
 
-1. **Chargez un PDF** (glisser-déposer ou bouton).
+1. **Chargez un PDF** (glisser-déposer ou bouton), ou cliquez sur **📱 Photo / scanner avec le téléphone** (voir plus bas).
 2. **Naviguez** entre les pages avec les flèches ◀ ▶ ou le champ de numéro de page.
 3. Au choix :
    - cliquez sur **OCR total** pour lire tout le document ;
@@ -158,6 +159,22 @@ cd ../backend && python -m uvicorn main:app --port 8000   # http://localhost:800
 7. Cliquez sur **Télécharger (.txt)** pour exporter tous les résultats validés.
 
 💡 Un simple clic sur le PDF efface la zone. Le bouton *OCR de la zone* reste grisé tant qu'aucune zone n'est tracée.
+
+---
+
+## 📱 Photo depuis le téléphone
+
+1. Sur l'écran d'accueil, cliquez sur **📱 Photo / scanner avec le téléphone** : un QR code s'affiche.
+2. Scannez-le avec l'appareil photo du téléphone (même Wi-Fi que l'ordinateur), puis touchez **Prendre une photo**.
+3. Touchez **Envoyer vers Lectio** : la photo apparaît dans Lectio comme un document d'une page, prête pour l'OCR.
+
+À savoir :
+- Le téléphone et l'ordinateur doivent être sur le **même réseau**. Les Wi-Fi « invités » ou d'entreprise isolent parfois les appareils.
+- Sur macOS, acceptez la fenêtre « Autoriser les connexions entrantes » au premier essai.
+- Chaque QR code est valable **15 minutes** et pour **une seule photo**.
+- **Sécurité** : l'API écoute sur le réseau local, mais depuis un autre appareil seules la page photo et l'envoi de photo (protégés par un jeton aléatoire) sont accessibles. Le reste de l'API est réservé à l'ordinateur.
+- La qualité de l'OCR dépend de la photo : document à plat, bien éclairé, sans reflet, pris bien de face.
+- En mode développement, lancez l'API avec `--host 0.0.0.0` (voir plus haut).
 
 ---
 
@@ -182,6 +199,10 @@ Exemple : `LECTIO_PYTHON=/chemin/vers/python npm run app`
 | `GET` | `/api/documents/{id}/pages/{n}/image` | Image JPEG de la page `n` (à partir de 1) |
 | `POST` | `/api/documents/{id}/ocr` | OCR de tout le document ; renvoie `text` et `lines` (position de chaque ligne détectée) |
 | `POST` | `/api/documents/{id}/ocr/zone` | OCR d'une zone `{page, x, y, w, h}` (valeurs de 0 à 1) ; renvoie `text` et `lines` |
+| `POST` | `/api/mobile/sessions` | Crée un QR code (session de 15 minutes) pour la photo depuis le téléphone |
+| `GET` | `/api/mobile/sessions/{token}` | Indique si la photo est arrivée |
+| `GET` | `/mobile/{token}` | Page photo affichée sur le téléphone |
+| `POST` | `/api/mobile/upload/{token}` | Reçoit la photo du téléphone |
 | `GET` | `/api/health` | Vérifie que le serveur répond |
 
 La documentation interactive est disponible sur `/docs` quand l'API tourne.
@@ -197,6 +218,7 @@ La documentation interactive est disponible sur `/docs` quand l'API tourne.
 | « L'interface n'est pas compilée » | Lancez `npm run build` dans `frontend/`, ou utilisez `npm run app` |
 | Fenêtre bloquée sur « Démarrage du moteur OCR… » | Premier lancement : attendez le téléchargement des modèles. Au-delà de 90 s, une erreur détaillée s'affiche |
 | « Document introuvable » | Le serveur a redémarré : rechargez le PDF |
+| Le téléphone n'ouvre pas la page du QR code | Vérifiez le même Wi-Fi, le pare-feu de l'ordinateur et que l'API écoute sur `0.0.0.0` |
 | Une zone ne donne aucun texte | Élargissez-la un peu et évitez de couper les lignes en deux |
 
 ---

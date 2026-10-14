@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ocrDocument, ocrZone, pageImageUrl, uploadPdf } from "./api.js";
 import PdfViewer from "./PdfViewer.jsx";
+import MobileCapture from "./MobileCapture.jsx";
 import UploadZone from "./UploadZone.jsx";
 
 export default function App() {
@@ -15,6 +16,7 @@ export default function App() {
   const [hoverId, setHoverId] = useState(null);       // résultat survolé dans la liste
   const [busy, setBusy] = useState(null);        // null | "upload" | "doc" | "zone"
   const [error, setError] = useState(null);
+  const [showMobile, setShowMobile] = useState(false); // fenêtre « photo depuis le téléphone »
 
   const selection = selections[page] ?? null;
   const pageInfo = doc?.pages[page - 1];
@@ -36,22 +38,24 @@ export default function App() {
     }
   };
 
+  // Affiche un nouveau document (PDF chargé ou photo reçue du téléphone)
+  const openDocument = (d) => {
+    setDoc(d);
+    setPage(1);
+    setSelections({});
+    setText("");
+    setSource("");
+    setValidated([]);
+    setResultZone(null);
+    setResultLines([]);
+  };
+
   const loadFile = (file) => {
     if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
       setError("Le fichier doit être un PDF.");
       return;
     }
-    guard("upload", async () => {
-      const d = await uploadPdf(file);
-      setDoc(d);
-      setPage(1);
-      setSelections({});
-      setText("");
-      setSource("");
-      setValidated([]);
-      setResultZone(null);
-      setResultLines([]);
-    });
+    guard("upload", async () => openDocument(await uploadPdf(file)));
   };
 
   const applyResult = (r, zone) => {
@@ -126,7 +130,11 @@ export default function App() {
       )}
 
       {!doc ? (
-        <UploadZone onFile={loadFile} busy={busy === "upload"} />
+        <UploadZone
+          onFile={loadFile}
+          onMobile={() => setShowMobile(true)}
+          busy={busy === "upload"}
+        />
       ) : (
         <main className="workspace">
           <section className="viewer">
@@ -248,6 +256,16 @@ export default function App() {
             )}
           </aside>
         </main>
+      )}
+
+      {showMobile && (
+        <MobileCapture
+          onDocument={(d) => {
+            openDocument(d);
+            setShowMobile(false);
+          }}
+          onClose={() => setShowMobile(false)}
+        />
       )}
     </div>
   );

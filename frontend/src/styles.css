@@ -125,3 +125,20 @@ body {
   border: 1.5px dashed var(--primary); background: rgba(59, 91, 219, 0.10);
 }
 .highlight { border-width: 1.5px; }
+
+/* ---------- Photo depuis le téléphone ---------- */
+.upload-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45);
+  display: grid; place-items: center; z-index: 10; padding: 20px;
+}
+.modal {
+  background: var(--card); border-radius: 16px; padding: 24px; width: 100%; max-width: 400px;
+  text-align: center; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+}
+.modal h2 { margin: 0 0 12px; font-size: 1.15rem; }
+.modal p { margin: 8px 0; }
+.modal .qr { width: 240px; height: 240px; image-rendering: pixelated; }
+.modal .url { word-break: break-all; }
+.modal .waiting { font-weight: 600; margin-top: 12px; }
+.error-text { color: var(--danger); }
